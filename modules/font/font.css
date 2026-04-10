@@ -1,0 +1,54 @@
+/* ===== 字体管理面板 ===== */
+#ggg-font-panel { padding: 0; }
+
+/* 导入区 */
+.ggg-font-import-drawer { border: 1px solid var(--SmartThemeBorderColor, #444); border-radius: 6px; margin-bottom: 8px; overflow: hidden; }
+.ggg-font-import-header { display: flex; align-items: center; gap: 6px; padding: 8px 10px; cursor: pointer; font-size: 0.82em; font-weight: bold; color: var(--SmartThemeBodyColor, #ccc); background: rgba(255,255,255,0.03); user-select: none; }
+.ggg-font-import-header:hover { background: rgba(255,255,255,0.06); }
+.ggg-font-import-body { display: none; padding: 8px 10px; border-top: 1px solid var(--SmartThemeBorderColor, #444); }
+.ggg-font-import-drawer.open .ggg-font-import-body { display: block; }
+
+/* 导入切换 */
+.ggg-font-import-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.ggg-font-import-tab { padding: 4px 10px; font-size: 0.78em; border-radius: 4px; cursor: pointer; border: 1px solid var(--SmartThemeBorderColor, #444); background: transparent; color: var(--SmartThemeBodyColor, #ccc); transition: background 0.15s; }
+.ggg-font-import-tab.active { background: var(--SmartThemeQuoteColor, #666); color: #fff; }
+
+.ggg-font-import-panel { display: none; }
+.ggg-font-import-panel.active { display: block; }
+
+.ggg-font-import-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+.ggg-font-url-input { width: 100%; padding: 4px 8px; font-size: 0.78em; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor, #555); background: var(--SmartThemeBlurTintColor, #222); color: var(--SmartThemeBodyColor, #ccc); }
+.ggg-font-url-input:focus { outline: none; border-color: var(--SmartThemeQuoteColor, #aaa); }
+
+/* 字体列表 */
+.ggg-font-list { display: flex; flex-direction: column; gap: 2px; max-height: 400px; overflow-y: auto; }
+.ggg-font-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; transition: background 0.15s; }
+.ggg-font-item:hover { background: rgba(255,255,255,0.03); }
+.ggg-font-item-name { flex: 1; font-size: 0.8em; color: var(--SmartThemeBodyColor, #ccc); display: flex; align-items: center; gap: 8px; }
+.ggg-font-item-preview { font-size: 0.85em; opacity: 0.6; }
+.ggg-font-item-type { font-size: 0.65em; padding: 1px 4px; border-radius: 3px; background: rgba(100, 150, 255, 0.15); color: var(--SmartThemeBodyColor); opacity: 0.7; }
+.ggg-font-item-actions { display: flex; align-items: center; gap: 4px; }
+.ggg-font-enable-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--SmartThemeQuoteColor, #9b9); }
+
+/* 范围选择 */
+.ggg-font-scope-section { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--SmartThemeBorderColor, #444); border-radius: 6px; }
+.ggg-font-scope-title { font-size: 0.8em; font-weight: bold; margin-bottom: 6px; color: var(--SmartThemeBodyColor, #ccc); display: flex; justify-content: space-between; align-items: center; }
+.ggg-font-scope-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.ggg-font-scope-chip { padding: 3px 8px; font-size: 0.72em; border-radius: 12px; cursor: pointer; border: 1px solid var(--SmartThemeBorderColor, #555); background: transparent; color: var(--SmartThemeBodyColor, #ccc); transition: all 0.15s; user-select: none; }
+.ggg-font-scope-chip.active { background: var(--SmartThemeQuoteColor, #666); color: #fff; border-color: var(--SmartThemeQuoteColor, #666); }
+.ggg-font-custom-selector { width: 100%; padding: 4px 8px; font-size: 0.75em; font-family: monospace; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor, #555); background: var(--SmartThemeBlurTintColor, #222); color: var(--SmartThemeBodyColor, #ccc); display: none; }
+.ggg-font-custom-selector:focus { outline: none; border-color: var(--SmartThemeQuoteColor, #aaa); }
+
+/* 字体大小 */
+.ggg-font-size-section { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.ggg-font-size-input { width: 60px; padding: 3px 6px; font-size: 0.78em; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor, #555); background: var(--SmartThemeBlurTintColor, #222); color: var(--SmartThemeBodyColor, #ccc); text-align: center; }
+.ggg-font-size-unit { width: 48px; padding: 3px; font-size: 0.78em; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor, #555); background: var(--SmartThemeBlurTintColor, #222); color: var(--SmartThemeBodyColor, #ccc); }
+.ggg-font-size-label { font-size: 0.78em; color: var(--SmartThemeBodyColor, #ccc); }
+
+/* 空状态 */
+.ggg-font-empty { text-align: center; padding: 20px; opacity: 0.5; font-size: 0.82em; }
+
+/* 滚动条 */
+.ggg-font-list::-webkit-scrollbar { width: 4px; }
+.ggg-font-list::-webkit-scrollbar-thumb { background: var(--SmartThemeBorderColor, #555); border-radius: 2px; }

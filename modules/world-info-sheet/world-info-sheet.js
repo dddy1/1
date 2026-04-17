@@ -77,14 +77,46 @@ function enableSheet(sel) {
     sel.dataset.gggWiBound = '1';
     sel.classList.add('ggg-wi-hidden');
 
-    // 注入触发按钮（紧跟在原 select 之后）
+    // 同步隐藏 select2 包装器（select2 渲染的自定义下拉）
+    hideSelect2For(sel);
+
+    // 注入触发按钮 —— 使用 <select> 元素以继承酒馆原生 select 样式，
+    // 但拦截原生下拉行为，改为打开我们的底部面板
     let trigger = document.getElementById(TRIGGER_ID);
     if (!trigger) {
-        trigger = document.createElement('div');
+        trigger = document.createElement('select');
         trigger.id = TRIGGER_ID;
-        trigger.className = 'ggg-wi-trigger';
-        trigger.addEventListener('click', () => openSheet(sel));
-        sel.parentNode.insertBefore(trigger, sel.nextSibling);
+        trigger.className = 'ggg-wi-trigger text_pole';
+        trigger.innerHTML = '<option value="">选择世界书...</option>';
+        // 阻止原生下拉，改为打开自定义面板
+        // 移动端只走 touchend（避免 touchstart 后的合成 click 触发 overlay 关闭）
+        // 桌面端走 mousedown
+        let touchUsed = false;
+        trigger.addEventListener('touchend', e => {
+            touchUsed = true;
+            e.preventDefault();
+            e.stopPropagation();
+            trigger.blur();
+            openSheet(sel);
+        }, { passive: false });
+        trigger.addEventListener('mousedown', e => {
+            if (touchUsed) { touchUsed = false; return; }
+            e.preventDefault();
+            e.stopPropagation();
+            trigger.blur();
+            openSheet(sel);
+        });
+        // 屏蔽 click（防止合成 click 二次触发）
+        trigger.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+        trigger.addEventListener('keydown', e => {
+            if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+                e.preventDefault();
+                openSheet(sel);
+            }
+        });
+        // 找到 select 的最后一个兄弟相关节点（select 或 select2-container），按钮插在其后
+        const anchor = findSelect2For(sel) || sel;
+        anchor.parentNode.insertBefore(trigger, anchor.nextSibling);
     }
     updateTriggerLabel(sel, trigger);
 
@@ -100,8 +132,29 @@ function enableSheet(sel) {
 function disableSheet(sel) {
     sel.classList.remove('ggg-wi-hidden');
     delete sel.dataset.gggWiBound;
+    // 恢复 select2 包装器
+    const s2 = findSelect2For(sel);
+    if (s2) s2.classList.remove('ggg-wi-hidden');
     document.getElementById(TRIGGER_ID)?.remove();
     closeSheet();
+}
+
+/** 在 #world_info 周围找 select2 自动生成的容器节点 */
+function findSelect2For(sel) {
+    if (!sel || !sel.parentNode) return null;
+    // select2 通常把 .select2-container 作为 select 的相邻兄弟插入
+    let n = sel.nextElementSibling;
+    while (n) {
+        if (n.classList && n.classList.contains('select2-container')) return n;
+        n = n.nextElementSibling;
+    }
+    // 退路：在父节点内查找含有 select2-world_info-container 的容器
+    return sel.parentNode.querySelector('.select2-container');
+}
+
+function hideSelect2For(sel) {
+    const s2 = findSelect2For(sel);
+    if (s2) s2.classList.add('ggg-wi-hidden');
 }
 
 function updateTriggerLabel(sel, trigger) {
@@ -111,18 +164,16 @@ function updateTriggerLabel(sel, trigger) {
     const count = selected.length;
     let preview = '';
     if (count === 0) {
-        preview = '未选择世界书';
+        preview = `📖 未选择世界书 (共 ${total} 本)`;
     } else if (count <= 2) {
-        preview = selected.map(o => o.textContent.trim()).join('、');
+        preview = `📖 ${selected.map(o => o.textContent.trim()).join('、')}`;
     } else {
-        preview = `已选 ${count} 个`;
+        preview = `📖 已选 ${count}/${total} 本`;
     }
-    trigger.innerHTML = `
-        <i class="ggg-fa fa-solid fa-book-open"></i>
-        <span class="ggg-wi-trigger-label">${escapeHtml(preview)}</span>
-        <span class="ggg-wi-trigger-count">${count}/${total}</span>
-        <i class="ggg-fa fa-solid fa-chevron-up"></i>
-    `;
+    // 用单 option 显示当前状态
+    const opt = trigger.options[0] || trigger.appendChild(document.createElement('option'));
+    opt.textContent = preview;
+    opt.value = '';
 }
 
 // ============================================================
@@ -130,45 +181,71 @@ function updateTriggerLabel(sel, trigger) {
 // ============================================================
 function openSheet(sel) {
     closeSheet();
+    // overlay 与 sheet 拆为两个独立的 body 子节点 ——
+    // 避免 overlay 的 backdrop-filter 在部分浏览器（尤其移动端）
+    // 给后代 position:fixed 创建包含块，导致 sheet 定位错位/不可见
     const overlay = document.createElement('div');
     overlay.id = SHEET_ID;
     overlay.className = 'ggg-wi-overlay';
-    overlay.innerHTML = `
-        <div class="ggg-wi-sheet" role="dialog" aria-label="选择世界书">
-            <div class="ggg-wi-sheet-handle"></div>
-            <div class="ggg-wi-sheet-header">
-                <i class="ggg-fa fa-solid fa-book-open"></i>
-                <span class="ggg-wi-sheet-title">选择世界书</span>
-                <input type="text" class="ggg-wi-search" placeholder="搜索…">
-                <button class="ggg-wi-close" title="关闭"><i class="ggg-fa fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="ggg-wi-sheet-toolbar">
-                <button class="ggg-wi-btn-clear"><i class="ggg-fa fa-solid fa-eraser"></i> 全不选</button>
-                <span class="ggg-wi-count">已选 0</span>
-            </div>
-            <div class="ggg-wi-sheet-body"></div>
+
+    const sheet = document.createElement('div');
+    sheet.className = 'ggg-wi-sheet';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', '选择世界书');
+    // 关键定位 —— 关键点：酒馆把 <html> 设了 transform，导致 fixed 元素的
+    // 包含块不是视口（高度为 0）。所以这里用 vh 单位（永远相对视口）+
+    // transform translateY(calc(100vh - 100%)) 来把元素"拉"到视口底部
+    const inline = sheet.style;
+    inline.setProperty('position', 'fixed', 'important');
+    inline.setProperty('top', '0', 'important');
+    inline.setProperty('bottom', 'auto', 'important');
+    inline.setProperty('left', '0', 'important');
+    inline.setProperty('right', '0', 'important');
+    inline.setProperty('margin', '0 auto', 'important');
+    inline.setProperty('width', '100%', 'important');
+    inline.setProperty('max-width', '720px', 'important');
+    inline.setProperty('max-height', '75vh', 'important');
+    inline.setProperty('z-index', '99999', 'important');
+    // 起始：把 sheet 推到视口下方（100vh 即视口高 → 完全不可见）
+    inline.setProperty('transform', 'translateY(100vh)', 'important');
+    inline.setProperty('display', 'flex', 'important');
+    inline.setProperty('flex-direction', 'column', 'important');
+    sheet.innerHTML = `
+        <div class="ggg-wi-sheet-handle"></div>
+        <div class="ggg-wi-sheet-header">
+            <i class="ggg-fa fa-solid fa-book-open"></i>
+            <span class="ggg-wi-sheet-title">选择世界书</span>
+            <input type="text" class="ggg-wi-search" placeholder="搜索…">
+            <button class="ggg-wi-close" title="关闭"><i class="ggg-fa fa-solid fa-xmark"></i></button>
         </div>
+        <div class="ggg-wi-sheet-toolbar">
+            <button class="ggg-wi-btn-clear"><i class="ggg-fa fa-solid fa-eraser"></i> 全不选</button>
+            <span class="ggg-wi-count">已选 0</span>
+        </div>
+        <div class="ggg-wi-sheet-body"></div>
     `;
     document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
 
     // 渲染选项列表
-    const body = overlay.querySelector('.ggg-wi-sheet-body');
+    const body = sheet.querySelector('.ggg-wi-sheet-body');
     renderOptions(sel, body);
 
     // 事件
-    const closeBtn = overlay.querySelector('.ggg-wi-close');
-    closeBtn.addEventListener('click', closeSheet);
-    overlay.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
+    sheet.querySelector('.ggg-wi-close').addEventListener('click', closeSheet);
+    // overlay 点击关闭 —— 延迟 250ms 绑定，避开 touchstart→合成 click 的事件链
+    // 否则在移动端打开瞬间就会被合成点击关掉
+    setTimeout(() => overlay.addEventListener('click', closeSheet), 250);
 
-    overlay.querySelector('.ggg-wi-btn-clear').addEventListener('click', () => {
+    sheet.querySelector('.ggg-wi-btn-clear').addEventListener('click', () => {
         Array.from(sel.options).forEach(o => o.selected = false);
         triggerNativeChange(sel);
-        renderOptions(sel, body);
+        renderOptions(sel, body, sheet);
         updateTriggerLabel(sel, document.getElementById(TRIGGER_ID));
-        updateSheetCount(overlay, sel);
+        updateSheetCount(sheet, sel);
     });
 
-    const search = overlay.querySelector('.ggg-wi-search');
+    const search = sheet.querySelector('.ggg-wi-search');
     search.addEventListener('input', () => {
         const kw = search.value.trim().toLowerCase();
         body.querySelectorAll('.ggg-wi-item').forEach(li => {
@@ -180,17 +257,29 @@ function openSheet(sel) {
     ['keydown','keyup','keypress','input'].forEach(ev =>
         search.addEventListener(ev, e => e.stopPropagation()));
 
-    updateSheetCount(overlay, sel);
+    // 阻止 sheet 内点击穿透到 overlay
+    sheet.addEventListener('click', e => e.stopPropagation());
+
+    // 重新渲染 + 计数
+    renderOptions(sel, body, sheet);
+    updateSheetCount(sheet, sel);
 
     // ESC 关闭
     const escHandler = e => { if (e.key === 'Escape') { closeSheet(); document.removeEventListener('keydown', escHandler); } };
     document.addEventListener('keydown', escHandler);
 
-    // 触发动画
-    requestAnimationFrame(() => overlay.classList.add('open'));
+    // 触发动画 —— 用两次 rAF 确保浏览器先 commit 初始 transform，再 commit 动画终态
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            overlay.classList.add('open');
+            sheet.classList.add('open');
+            // 把 sheet 平移到视口底：100vh 减去 sheet 自身高度（100%）
+            sheet.style.setProperty('transform', 'translateY(calc(100vh - 100%))', 'important');
+        });
+    });
 }
 
-function renderOptions(sel, body) {
+function renderOptions(sel, body, sheet) {
     const items = Array.from(sel.options).map((opt, idx) => {
         const txt = (opt.textContent || '').trim();
         const checked = opt.selected ? 'checked' : '';
@@ -214,22 +303,25 @@ function renderOptions(sel, body) {
             li.classList.toggle('selected', cb.checked);
             triggerNativeChange(sel);
             updateTriggerLabel(sel, document.getElementById(TRIGGER_ID));
-            updateSheetCount(li.closest('.ggg-wi-overlay'), sel);
+            updateSheetCount(sheet || li.closest('.ggg-wi-sheet'), sel);
         });
     });
 }
 
-function updateSheetCount(overlay, sel) {
-    if (!overlay) return;
-    const cnt = overlay.querySelector('.ggg-wi-count');
+function updateSheetCount(scope, sel) {
+    if (!scope) return;
+    const cnt = scope.querySelector('.ggg-wi-count');
     if (cnt) cnt.textContent = `已选 ${Array.from(sel.selectedOptions).length}`;
 }
 
 function closeSheet() {
     const overlay = document.getElementById(SHEET_ID);
-    if (!overlay) return;
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 220);
+    const sheet = document.querySelector('.ggg-wi-sheet');
+    if (!overlay && !sheet) return;
+    overlay?.classList.remove('open');
+    sheet?.classList.remove('open');
+    sheet?.style.setProperty('transform', 'translateY(100vh)', 'important');
+    setTimeout(() => { overlay?.remove(); sheet?.remove(); }, 220);
 }
 
 function triggerNativeChange(sel) {

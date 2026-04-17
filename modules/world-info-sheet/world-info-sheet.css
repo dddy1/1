@@ -2,74 +2,46 @@
  * 世界书底部面板样式
  * ========================================================== */
 
-/* 隐藏原 #world_info 多选框 */
-#world_info.ggg-wi-hidden {
+/* 隐藏原 #world_info 多选框 + 它的 select2 包装器 */
+#world_info.ggg-wi-hidden,
+.select2-container.ggg-wi-hidden {
     display: none !important;
 }
 
-/* 触发按钮：替代原 select 的位置 */
-.ggg-wi-trigger {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+/* 触发按钮 —— 沿用酒馆原生 select / .text_pole 样式，仅微调几项 */
+select.ggg-wi-trigger {
+    width: 100%;
     margin: 4px 0;
-    border-radius: 8px;
-    border: 1px solid var(--SmartThemeBorderColor, #555);
-    background: var(--SmartThemeBlurTintColor, color-mix(in srgb, var(--SmartThemeQuoteColor, #888) 8%, transparent));
-    color: var(--SmartThemeBodyColor, #ddd);
     cursor: pointer;
-    font-size: 0.9em;
-    transition: background 0.15s, border-color 0.15s;
-    user-select: none;
-}
-.ggg-wi-trigger:hover {
-    border-color: var(--SmartThemeQuoteColor, #aaa);
-    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #888) 15%, transparent);
-}
-.ggg-wi-trigger-label {
-    flex: 1; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.ggg-wi-trigger-count {
-    font-size: 0.8em; opacity: 0.65;
-    padding: 1px 6px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #888) 15%, transparent);
-    flex-shrink: 0;
 }
 
-/* 全屏遮罩 */
+/* 全屏遮罩 —— 用 100vw/100vh 而非 inset:0，
+   规避祖先 transform 导致 fixed 定位失效的情况 */
 .ggg-wi-overlay {
-    position: fixed; inset: 0;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
     z-index: 99998;
     background: color-mix(in srgb, #000 40%, transparent);
     backdrop-filter: blur(2px);
     opacity: 0;
     transition: opacity 0.22s;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    pointer-events: auto;
 }
 .ggg-wi-overlay.open { opacity: 1; }
 
-/* 底部升起面板 */
+/* 底部升起面板 —— 关键定位由 JS 内联 !important 设置（见 .js 中说明）
+   这里只放外观 */
 .ggg-wi-sheet {
-    width: 100%;
-    max-width: 720px;
-    max-height: 75vh;
-    display: flex; flex-direction: column;
     background: var(--SmartThemeBlurTintColor, color-mix(in srgb, var(--SmartThemeQuoteColor, #888) 12%, #1a1a1a));
     border: 1px solid var(--SmartThemeBorderColor, #555);
     border-bottom: none;
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(12px);
-    transform: translateY(100%);
     transition: transform 0.22s ease-out;
     color: var(--SmartThemeBodyColor, #eee);
 }
-.ggg-wi-overlay.open .ggg-wi-sheet { transform: translateY(0); }
 
 /* 顶部小握把 */
 .ggg-wi-sheet-handle {

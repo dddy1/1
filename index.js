@@ -10,6 +10,7 @@ import { initGallery, updateAvatarShape } from './modules/gallery/gallery.js';
 import { initFont } from './modules/font/font.js';
 import { initCustomCSS, injectCustomCSS, injectAllCustomHTML, onThemeChangedCustomCSS } from './modules/custom-css/custom-css.js';
 import { initWorldInfoSheet } from './modules/world-info-sheet/world-info-sheet.js';
+import { initPhone } from './modules/phone/phone.js';
 
 // ============================================================
 // 常量 & 导出
@@ -59,6 +60,7 @@ export function saveAllSettings() {
         themeOverrides: settings.themeOverrides,
         fonts: settings.fonts,
         wiSheet: settings.wiSheet,
+        phone: settings.phone,
         _migrated: true,
     };
     SillyTavern.getContext().saveSettingsDebounced();
@@ -79,6 +81,7 @@ eventSource.on(event_types.APP_READY, async () => {
         loadModuleCSS('modules/font/font.css');
         loadModuleCSS('modules/custom-css/custom-css.css');
         loadModuleCSS('modules/world-info-sheet/world-info-sheet.css');
+        loadModuleCSS('modules/phone/phone.css');
 
         loadSettings();
         initTabs();
@@ -94,6 +97,7 @@ eventSource.on(event_types.APP_READY, async () => {
         injectCustomCSS();
         injectAllCustomHTML();
         initWorldInfoSheet();
+        initPhone();
 
         updateTabStates();
         updateUICustomVisibility();
@@ -145,6 +149,7 @@ function loadSettings() {
     settings.themeOverrides = saved.themeOverrides || {};
     settings.fonts = saved.fonts || { enabled: true, list: [] };
     settings.wiSheet = saved.wiSheet || { enabled: false, pcMode: false };
+    settings.phone = saved.phone || { enabled: false, hideMobileStatusBar: false };
 
     if (saved.overrides && Object.keys(saved.overrides).length > 0 && !saved._migrated) {
         const theme = getThemeName();

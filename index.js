@@ -8,6 +8,7 @@ import { extension_settings, renderExtensionTemplateAsync } from '../../../exten
 import { initUICustom, onThemeChangedUICustom, injectOverrideStyle } from './modules/ui-custom/ui-custom.js';
 import { initGallery, updateAvatarShape } from './modules/gallery/gallery.js';
 import { initFont } from './modules/font/font.js';
+import { initCustomCSS, injectCustomCSS, injectAllCustomHTML, onThemeChangedCustomCSS } from './modules/custom-css/custom-css.js';
 
 // ============================================================
 // 常量 & 导出
@@ -15,13 +16,14 @@ import { initFont } from './modules/font/font.js';
 export const EXTENSION_NAME = 'third-party/GuaGua-Gadgets';
 export const SETTINGS_KEY = 'ggg';
 
-const FEATURE_TAB_MAP = { beautify: 'beautifyEnabled' };
+const FEATURE_TAB_MAP = { beautify: 'beautifyEnabled', tools: 'toolsEnabled' };
 const TAB_ORIGINAL_ORDER = ['main', 'beautify', 'tools', 'achievement', 'phone', 'gallery'];
 
 export let settings = {
     enabled: true,
     beautifyEnabled: true,
     uiCustomEnabled: true,
+    toolsEnabled: true,
     gallery: [],
     avatars: [],
     themeOverrides: {},
@@ -50,6 +52,7 @@ export function saveAllSettings() {
         enabled: settings.enabled,
         beautifyEnabled: settings.beautifyEnabled,
         uiCustomEnabled: settings.uiCustomEnabled,
+        toolsEnabled: settings.toolsEnabled,
         gallery: settings.gallery,
         avatars: settings.avatars,
         themeOverrides: settings.themeOverrides,
@@ -72,6 +75,7 @@ eventSource.on(event_types.APP_READY, async () => {
         loadModuleCSS('modules/ui-custom/ui-custom.css');
         loadModuleCSS('modules/gallery/gallery.css');
         loadModuleCSS('modules/font/font.css');
+        loadModuleCSS('modules/custom-css/custom-css.css');
 
         loadSettings();
         initTabs();
@@ -81,16 +85,25 @@ eventSource.on(event_types.APP_READY, async () => {
 
         initUICustom();
         initGallery();
+        initBeautifyNav();
         initFont();
+        initCustomCSS();
+        injectCustomCSS();
+        injectAllCustomHTML();
 
         updateTabStates();
         updateUICustomVisibility();
+
+        // 所有模块初始化完成后，触发一次 ggg标记 重新扫描
+        // 确保「自定义CSS」中的 ggg-color 等标记能被「UI主题自定义」面板检测到
+        setTimeout(() => document.dispatchEvent(new CustomEvent('ggg-custom-css-saved')), 200);
 
         eventSource.on(event_types.SETTINGS_UPDATED, () => {
             updateAvatarShape();
             const newTheme = getThemeName();
             if (newTheme !== currentThemeName) {
-                onThemeChangedUICustom(newTheme);
+                onThemeChangedUICustom(newTheme); // 内部会调用 setCurrentThemeName
+                onThemeChangedCustomCSS();
             }
         });
 
@@ -122,6 +135,7 @@ function loadSettings() {
     settings.enabled = saved.enabled !== false;
     settings.beautifyEnabled = saved.beautifyEnabled !== false;
     settings.uiCustomEnabled = saved.uiCustomEnabled !== false;
+    settings.toolsEnabled = saved.toolsEnabled !== false;
     settings.gallery = saved.gallery || [];
     settings.avatars = saved.avatars || [];
     settings.themeOverrides = saved.themeOverrides || {};
@@ -143,11 +157,13 @@ function loadSettings() {
 }
 
 function syncToggleUI() {
-    const master = document.getElementById('ggg-master-toggle');
+    const master   = document.getElementById('ggg-master-toggle');
     const beautify = document.getElementById('ggg-toggle-beautify');
+    const tools    = document.getElementById('ggg-toggle-tools');
     const uiCustom = document.getElementById('ggg-toggle-ui-custom');
-    if (master) master.checked = settings.enabled;
+    if (master)   master.checked   = settings.enabled;
     if (beautify) beautify.checked = settings.beautifyEnabled;
+    if (tools)    tools.checked    = settings.toolsEnabled;
     if (uiCustom) uiCustom.checked = settings.uiCustomEnabled;
 
     const featureSection = document.getElementById('ggg-feature-toggles-section');
@@ -210,6 +226,20 @@ function initTabs() {
 }
 
 // ============================================================
+// 美化面板导航栏（Phase 4）
+// ============================================================
+function initBeautifyNav() {
+    document.querySelectorAll('.ggg-beautify-nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.ggg-beautify-nav-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            document.querySelectorAll('.ggg-beautify-subpanel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`ggg-bpanel-${item.dataset.btab}`)?.classList.add('active');
+        });
+    });
+}
+
+// ============================================================
 // 主面板
 // ============================================================
 function initMainPanel() {
@@ -227,6 +257,12 @@ function initMainPanel() {
         updateTabStates();
         updateUICustomVisibility();
         injectOverrideStyle();
+        saveAllSettings();
+    });
+
+    document.getElementById('ggg-toggle-tools')?.addEventListener('change', (e) => {
+        settings.toolsEnabled = e.target.checked;
+        updateTabStates();
         saveAllSettings();
     });
 

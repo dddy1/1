@@ -859,6 +859,28 @@
                 <div class="ggg-section-divider"></div>
                 <div class="ggg-section-block">
                     <div class="ggg-section-title">
+                        <i class="ggg-fa fa-solid fa-list-ul"></i> 全局下拉面板
+                    </div>
+                    <div style="font-size:0.82em;opacity:0.7;margin:4px 0 8px;">
+                        把酒馆里所有原生 &lt;select&gt; 下拉（含多选）替换为底部升起的可视化面板，自带搜索/全选/清空。
+                    </div>
+                    <label class="ggg-toggle-label">
+                        <input type="checkbox" id="ggg-ss-toggle-mobile">
+                        <i class="ggg-fa fa-solid fa-mobile-screen ggg-toggle-icon"></i>
+                        <span>移动端启用</span>
+                    </label>
+                    <label class="ggg-toggle-label" style="margin-top:4px;">
+                        <input type="checkbox" id="ggg-ss-toggle-pc">
+                        <i class="ggg-fa fa-solid fa-desktop ggg-toggle-icon"></i>
+                        <span>PC 端也启用（用于测试）</span>
+                    </label>
+                    <div style="font-size:0.78em;opacity:0.5;margin-top:6px;">
+                        默认仅移动端（窗口宽度&lt;1000px）启用。已被"世界书面板"接管的下拉不会被重复劫持。
+                    </div>
+                </div>
+                <div class="ggg-section-divider"></div>
+                <div class="ggg-section-block">
+                    <div class="ggg-section-title">
                         <i class="ggg-fa fa-solid fa-camera"></i> 截图
                     </div>
                     <div class="ggg-empty-state" style="padding: 12px">
@@ -930,10 +952,34 @@
                         </label>
                     </div>
 
+                    <div class="ggg-toggle-row" style="display:flex;align-items:center;gap:10px;">
+                        <span style="min-width: 80px;">入口形态</span>
+                        <select id="ggg-phone-entry-mode" class="text_pole" style="flex:1;max-width:240px;">
+                            <option value="island">灵动岛（顶部胶囊，默认）</option>
+                            <option value="pc-floater">PC 悬浮窗（贴 sheld 右侧，可拖拽）</option>
+                            <option value="mobile-ball">移动悬浮球（贴边吸附）</option>
+                        </select>
+                    </div>
+
+                    <div class="ggg-toggle-row">
+                        <label class="checkbox_label">
+                            <input type="checkbox" id="ggg-phone-always-fullscreen" />
+                            <span>进入手机时调浏览器全屏（撑掉浏览器顶/底栏）</span>
+                        </label>
+                    </div>
+
+                    <div class="ggg-toggle-row" style="display:flex;align-items:center;gap:10px;">
+                        <span style="min-width: 80px;">主题</span>
+                        <select id="ggg-phone-theme" class="text_pole" style="flex:1;max-width:240px;">
+                            <option value="dark">深色（默认）</option>
+                            <option value="light">浅色</option>
+                        </select>
+                    </div>
+
                     <div class="ggg-empty-state" style="padding: 12px; margin-top: 12px;">
                         <div style="font-size: 12px; opacity: 0.7;">
-                            当前进度：<b>Phase 0 骨架</b> · 灵动岛 + 全屏壳 + 空主页<br>
-                            后续按 <code>PHONE_PLAN.md</code> 逐阶段填充
+                            三种入口共用同一套行为：<b>单击切换酒馆顶栏</b>，<b>双击进入/退出手机</b>。<br>
+                            后续按 <code>PHONE_PLAN.md</code> 逐阶段填充。
                         </div>
                     </div>
                 </div>

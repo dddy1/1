@@ -1,18 +1,47 @@
 /**
- * 灵动岛 —— 常驻视口顶部中央
- * 行为：
- *   - 单击：切换酒馆 #top-bar 显隐
- *   - 双击：进入/退出手机
- * 同样要规避酒馆 <html> transform 导致的 fixed 包含块问题，
- * 用 vh 单位或 transform 来锚定位置。
+ * 灵动岛 —— 常驻视口顶部，跟随酒馆顶栏动态定位
+ * v0.2.38：
+ *   - 挂在 body 上、fixed 定位（不进入 #sheld 内部，避免被 #chat 滚动等影响）
+ *   - top 由 JS 动态算：默认贴在 #extensionTopBar（若有）/ #top-bar 下方；
+ *     单击隐藏顶栏后回到顶部 6px
+ *   - top 变化用 CSS transition 平滑
  */
 
+import { bindEntryGestures } from './entry-gestures.js';
+
 const ISLAND_ID = 'ggg-phone-island';
-const TOP_BAR_HIDDEN_CLASS = 'ggg-phone-topbar-hidden';
+const TOPBAR_HIDDEN_CLASS = 'ggg-phone-topbar-hidden';
+const ISLAND_GAP = 4;
 
 let _onEnterPhone = null;
 let _onExitPhone = null;
 let _isPhoneOpen = false;
+let _recalcTimer = null;
+let _resizeObserver = null;
+
+function _findAnchorBottom() {
+    if (document.documentElement.classList.contains(TOPBAR_HIDDEN_CLASS)) {
+        return 6;
+    }
+    const ext = document.getElementById('extensionTopBar');
+    if (ext && ext.offsetParent !== null) {
+        const r = ext.getBoundingClientRect();
+        if (r.height > 0) return r.bottom + ISLAND_GAP;
+    }
+    const topBar = document.getElementById('top-bar');
+    if (topBar && topBar.offsetParent !== null) {
+        const r = topBar.getBoundingClientRect();
+        if (r.height > 0) return r.bottom + ISLAND_GAP;
+    }
+    return 36;
+}
+
+function recalcIslandPosition() {
+    const island = document.getElementById(ISLAND_ID);
+    if (!island) return;
+    const top = _findAnchorBottom();
+    island.style.setProperty('top', `${top}px`, 'important');
+}
 
 export function mountDynamicIsland({ onEnter, onExit }) {
     _onEnterPhone = onEnter;
@@ -25,23 +54,49 @@ export function mountDynamicIsland({ onEnter, onExit }) {
     island.className = 'ggg-phone-island';
     island.setAttribute('role', 'button');
     island.setAttribute('aria-label', '呱呱手机灵动岛');
+    island.title = '单击：切换酒馆顶栏；双击：进入手机；三击：切换浏览器全屏';
     island.innerHTML = `<div class="ggg-phone-island-dot"></div>`;
-    // 关键定位用内联 !important（同世界书面板的处理方式）
     const s = island.style;
     s.setProperty('position', 'fixed', 'important');
-    s.setProperty('top', '6px', 'important');
     s.setProperty('left', '50%', 'important');
     s.setProperty('transform', 'translateX(-50%)', 'important');
     s.setProperty('z-index', '99998', 'important');
 
     document.body.appendChild(island);
 
-    bindClickAndDoubleClick(island);
+    bindEntryGestures(island, {
+        isOpen: () => _isPhoneOpen,
+        onEnter: () => _onEnterPhone?.(),
+        onExit: () => _onExitPhone?.(),
+    });
+
+    recalcIslandPosition();
+
+    window.addEventListener('resize', recalcIslandPosition, { passive: true });
+
+    if (window.ResizeObserver) {
+        _resizeObserver = new ResizeObserver(() => recalcIslandPosition());
+        const topBar = document.getElementById('top-bar');
+        const ext = document.getElementById('extensionTopBar');
+        if (topBar) _resizeObserver.observe(topBar);
+        if (ext) _resizeObserver.observe(ext);
+    }
+
+    _recalcTimer = setInterval(recalcIslandPosition, 1000);
 }
 
 export function unmountDynamicIsland() {
     document.getElementById(ISLAND_ID)?.remove();
-    document.documentElement.classList.remove(TOP_BAR_HIDDEN_CLASS);
+    document.documentElement.classList.remove(TOPBAR_HIDDEN_CLASS);
+    window.removeEventListener('resize', recalcIslandPosition);
+    if (_resizeObserver) {
+        _resizeObserver.disconnect();
+        _resizeObserver = null;
+    }
+    if (_recalcTimer) {
+        clearInterval(_recalcTimer);
+        _recalcTimer = null;
+    }
 }
 
 export function setIslandPhoneOpen(open) {
@@ -51,42 +106,6 @@ export function setIslandPhoneOpen(open) {
     island.classList.toggle('open', open);
 }
 
-/**
- * 绑定单击/双击 —— 用延迟判定区分单击与双击
- * 单击 #top-bar 切换；双击进入/退出手机
- */
-function bindClickAndDoubleClick(el) {
-    let clickTimer = null;
-    const DOUBLE_CLICK_DELAY = 250;
-
-    const handleSingle = () => {
-        document.documentElement.classList.toggle(TOP_BAR_HIDDEN_CLASS);
-    };
-    const handleDouble = () => {
-        if (_isPhoneOpen) _onExitPhone?.();
-        else _onEnterPhone?.();
-    };
-
-    const onTap = (e) => {
-        e.preventDefault();
-        if (clickTimer) {
-            clearTimeout(clickTimer);
-            clickTimer = null;
-            handleDouble();
-        } else {
-            clickTimer = setTimeout(() => {
-                clickTimer = null;
-                handleSingle();
-            }, DOUBLE_CLICK_DELAY);
-        }
-    };
-
-    // touchend 优先；click 作为桌面端兜底
-    el.addEventListener('touchend', onTap, { passive: false });
-    el.addEventListener('click', (e) => {
-        // 触摸端 touchend 已处理，避免 click 重复触发
-        if (e.detail === 0) return; // 由键盘触发的可放行；触摸合成点也走这里时…
-        // 简化：只要有 ongoing 的 clickTimer 就跳过原生 click
-        onTap(e);
-    });
+export function refreshIslandPosition() {
+    recalcIslandPosition();
 }

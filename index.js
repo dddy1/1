@@ -10,7 +10,12 @@ import { initGallery, updateAvatarShape } from './modules/gallery/gallery.js';
 import { initFont } from './modules/font/font.js';
 import { initCustomCSS, injectCustomCSS, injectAllCustomHTML, onThemeChangedCustomCSS } from './modules/custom-css/custom-css.js';
 import { initWorldInfoSheet } from './modules/world-info-sheet/world-info-sheet.js';
+import { initSelectSheet } from './modules/select-sheet/select-sheet.js';
 import { initPhone } from './modules/phone/phone.js';
+import { initFontRescue } from './modules/font-rescue/font-rescue.js';
+
+// 紧急救援：启动时立即注册检测，与 ST 设置加载顺序无关
+initFontRescue();
 
 // ============================================================
 // 常量 & 导出
@@ -61,6 +66,9 @@ export function saveAllSettings() {
         fonts: settings.fonts,
         wiSheet: settings.wiSheet,
         phone: settings.phone,
+        // select-sheet 模块持久化字段（之前漏写，导致每次保存把收藏抹掉）
+        selectSheet: settings.selectSheet,
+        selectFavs: settings.selectFavs,
         _migrated: true,
     };
     SillyTavern.getContext().saveSettingsDebounced();
@@ -81,6 +89,7 @@ eventSource.on(event_types.APP_READY, async () => {
         loadModuleCSS('modules/font/font.css');
         loadModuleCSS('modules/custom-css/custom-css.css');
         loadModuleCSS('modules/world-info-sheet/world-info-sheet.css');
+        loadModuleCSS('modules/select-sheet/select-sheet.css');
         loadModuleCSS('modules/phone/phone.css');
 
         loadSettings();
@@ -97,6 +106,7 @@ eventSource.on(event_types.APP_READY, async () => {
         injectCustomCSS();
         injectAllCustomHTML();
         initWorldInfoSheet();
+        initSelectSheet();
         initPhone();
 
         updateTabStates();
@@ -150,6 +160,9 @@ function loadSettings() {
     settings.fonts = saved.fonts || { enabled: true, list: [] };
     settings.wiSheet = saved.wiSheet || { enabled: false, pcMode: false };
     settings.phone = saved.phone || { enabled: false, hideMobileStatusBar: false };
+    // select-sheet 持久化字段恢复（之前漏读，导致升级后收藏丢失）
+    settings.selectSheet = saved.selectSheet || { mobileEnabled: true, pcEnabled: true };
+    settings.selectFavs  = saved.selectFavs  || {};
 
     if (saved.overrides && Object.keys(saved.overrides).length > 0 && !saved._migrated) {
         const theme = getThemeName();
